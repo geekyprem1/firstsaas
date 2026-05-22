@@ -23,7 +23,7 @@ export const Loader = () => {
   }, []);
 
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 glass-panel rounded-2xl border-purple-500/20 max-w-xl mx-auto neon-glow-purple my-6 animate-pulse-glow">
+    <div className="flex flex-col items-center justify-center py-12 px-4 glass-panel rounded-2xl border-purple-500/20 w-full mx-auto neon-glow-purple my-6 animate-pulse-glow min-h-[460px]">
       <div className="relative mb-6">
         {/* Animated glowing outer rings */}
         <div className="w-20 h-20 rounded-full border-4 border-purple-500/10 border-t-purple-500 border-b-purple-500 animate-spin" />

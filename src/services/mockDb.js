@@ -1,5 +1,6 @@
 // Mock Database Service for AdViral AI
 // Synchronizes fully with LocalStorage to simulate Supabase operations in client-only mode
+import { safeStorage } from './safeStorage';
 
 const STORAGE_KEYS = {
   USERS: 'adviral_users',
@@ -184,16 +185,16 @@ const DEFAULT_TRANSACTIONS = [
 
 // LocalStorage Helper functions
 const getStored = (key, fallback) => {
-  const data = localStorage.getItem(key);
+  const data = safeStorage.getItem(key);
   if (!data) {
-    localStorage.setItem(key, JSON.stringify(fallback));
+    safeStorage.setItem(key, JSON.stringify(fallback));
     return fallback;
   }
   return JSON.parse(data);
 };
 
 const setStored = (key, data) => {
-  localStorage.setItem(key, JSON.stringify(data));
+  safeStorage.setItem(key, JSON.stringify(data));
 };
 
 // Database Initialization

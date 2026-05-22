@@ -13,24 +13,25 @@ import {
 } from 'lucide-react';
 import { useDatabase } from '../../context/DatabaseContext';
 import Toast from '../../components/Toast';
+import { safeStorage } from '../../services/safeStorage';
 
 export const CreditManagement = () => {
   const { users, adminAddUserCredits, refreshAllData } = useDatabase();
 
   // Load and save local settings for credit operations
   const [welcomeCredits, setWelcomeCredits] = useState(
-    parseInt(localStorage.getItem('adviral_config_welcome_credits')) || 50
+    parseInt(safeStorage.getItem('adviral_config_welcome_credits')) || 50
   );
   
   // Custom tool pricing state
   const [costAd, setCostAd] = useState(
-    parseInt(localStorage.getItem('adviral_config_cost_ad_generator')) || 1
+    parseInt(safeStorage.getItem('adviral_config_cost_ad_generator')) || 1
   );
   const [costHooks, setCostHooks] = useState(
-    parseInt(localStorage.getItem('adviral_config_cost_viral_hooks')) || 1
+    parseInt(safeStorage.getItem('adviral_config_cost_viral_hooks')) || 1
   );
   const [costScripts, setCostScripts] = useState(
-    parseInt(localStorage.getItem('adviral_config_cost_ugc_scripts')) || 1
+    parseInt(safeStorage.getItem('adviral_config_cost_ugc_scripts')) || 1
   );
 
   // Global operations state
@@ -48,10 +49,10 @@ export const CreditManagement = () => {
     setFormLoading(true);
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    localStorage.setItem('adviral_config_welcome_credits', welcomeCredits.toString());
-    localStorage.setItem('adviral_config_cost_ad_generator', costAd.toString());
-    localStorage.setItem('adviral_config_cost_viral_hooks', costHooks.toString());
-    localStorage.setItem('adviral_config_cost_ugc_scripts', costScripts.toString());
+    safeStorage.setItem('adviral_config_welcome_credits', welcomeCredits.toString());
+    safeStorage.setItem('adviral_config_cost_ad_generator', costAd.toString());
+    safeStorage.setItem('adviral_config_cost_viral_hooks', costHooks.toString());
+    safeStorage.setItem('adviral_config_cost_ugc_scripts', costScripts.toString());
 
     setFormLoading(false);
     showToast('Platform credit configurations updated successfully!', 'success');
@@ -86,11 +87,11 @@ export const CreditManagement = () => {
       users.forEach(u => {
         const defaultLimit = u.plan === 'Pro' ? 1000 : u.plan === 'Enterprise' ? 99999 : 50;
         // Direct storage update
-        const rawUsers = JSON.parse(localStorage.getItem('adviral_users')) || [];
+        const rawUsers = JSON.parse(safeStorage.getItem('adviral_users')) || [];
         const idx = rawUsers.findIndex(item => item.id === u.id);
         if (idx !== -1) {
           rawUsers[idx].credits = defaultLimit;
-          localStorage.setItem('adviral_users', JSON.stringify(rawUsers));
+          safeStorage.setItem('adviral_users', JSON.stringify(rawUsers));
         }
       });
       refreshAllData();

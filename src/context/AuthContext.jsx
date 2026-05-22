@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { mockDb } from '../services/mockDb';
 import { supabase } from '../services/supabase';
+import { safeStorage } from '../services/safeStorage';
 
 const AuthContext = createContext();
 
@@ -45,11 +46,11 @@ export const AuthProvider = ({ children }) => {
               console.warn("Failed to sync profile on auth change, clearing session:", syncRes?.error);
               await supabase.auth.signOut();
               setUser(null);
-              localStorage.removeItem('adviral_active_user');
+              safeStorage.removeItem('adviral_active_user');
             }
           } else {
             setUser(null);
-            localStorage.removeItem('adviral_active_user');
+            safeStorage.removeItem('adviral_active_user');
           }
         } catch (err) {
           console.error("Auth state change error: ", err);
@@ -66,22 +67,27 @@ export const AuthProvider = ({ children }) => {
     } else {
       // Mock Fallback mode
       setSessionMode('mock');
-      const storedUser = localStorage.getItem('adviral_active_user');
+      const storedUser = safeStorage.getItem('adviral_active_user');
       if (storedUser) {
-        const parsed = JSON.parse(storedUser);
-        const freshUser = mockDb.getUserById(parsed.id);
-        if (freshUser) {
-          setUser(freshUser);
-          localStorage.setItem('adviral_active_user', JSON.stringify(freshUser));
-        } else {
-          setUser(parsed);
+        try {
+          const parsed = JSON.parse(storedUser);
+          const freshUser = mockDb.getUserById(parsed.id);
+          if (freshUser) {
+            setUser(freshUser);
+            safeStorage.setItem('adviral_active_user', JSON.stringify(freshUser));
+          } else {
+            setUser(parsed);
+          }
+        } catch (e) {
+          console.warn("Failed to parse stored active user:", e);
+          safeStorage.removeItem('adviral_active_user');
         }
       } else {
         // Auto seed normal creator alex for smooth developer testing experience
         const alex = mockDb.getUsers().find(u => u.email === 'alex@example.com');
         if (alex) {
           setUser(alex);
-          localStorage.setItem('adviral_active_user', JSON.stringify(alex));
+          safeStorage.setItem('adviral_active_user', JSON.stringify(alex));
         }
       }
       setLoading(false);
@@ -127,11 +133,11 @@ export const AuthProvider = ({ children }) => {
           // Force logout if banned
           await supabase.auth.signOut();
           setUser(null);
-          localStorage.removeItem('adviral_active_user');
+          safeStorage.removeItem('adviral_active_user');
           return { success: false, error: 'This account has been banned by the administrator.' };
         }
         setUser(profileData);
-        localStorage.setItem('adviral_active_user', JSON.stringify(profileData));
+        safeStorage.setItem('adviral_active_user', JSON.stringify(profileData));
         return { success: true, user: profileData };
       } else {
         console.warn("Error fetching profile, attempting to recreate in public schema: ", fetchError);
@@ -154,7 +160,7 @@ export const AuthProvider = ({ children }) => {
 
         if (inserted) {
           setUser(inserted);
-          localStorage.setItem('adviral_active_user', JSON.stringify(inserted));
+          safeStorage.setItem('adviral_active_user', JSON.stringify(inserted));
           return { success: true, user: inserted };
         } else if (insertErr) {
           console.warn("Manual insert failed. Doing one final select query to check if profile was created: ", insertErr);
@@ -168,11 +174,11 @@ export const AuthProvider = ({ children }) => {
             if (finalData.is_banned) {
               await supabase.auth.signOut();
               setUser(null);
-              localStorage.removeItem('adviral_active_user');
+              safeStorage.removeItem('adviral_active_user');
               return { success: false, error: 'This account has been banned by the administrator.' };
             }
             setUser(finalData);
-            localStorage.setItem('adviral_active_user', JSON.stringify(finalData));
+            safeStorage.setItem('adviral_active_user', JSON.stringify(finalData));
             return { success: true, user: finalData };
           }
         }
@@ -185,70 +191,88 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 800)); // Network delay simulation
+    const loginTimeout = setTimeout(() => {
+      console.warn("Login request timed out. Forcing loading state release.");
+      setLoading(false);
+    }, 8000);
 
-    if (sessionMode === 'supabase') {
-      try {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800)); // Network delay simulation
+
+      if (sessionMode === 'supabase') {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (error) {
+          clearTimeout(loginTimeout);
           setLoading(false);
           return { success: false, error: error.message };
         }
 
         if (data.user) {
           const syncRes = await syncSupabaseProfile(data.user.id, data.user.email);
+          clearTimeout(loginTimeout);
           setLoading(false);
           return syncRes;
         }
-      } catch (err) {
-        setLoading(false);
-        return { success: false, error: err.message || 'Authentication error.' };
-      }
-    } else {
-      // Mock Login Mode
-      if (email === 'admin@adviral.ai' && password === 'admin') {
-        const adminUser = mockDb.getUserById('admin-uuid-1');
-        setUser(adminUser);
-        localStorage.setItem('adviral_active_user', JSON.stringify(adminUser));
-        setLoading(false);
-        return { success: true, user: adminUser };
-      }
+      } else {
+        // Mock Login Mode
+        if (email === 'admin@adviral.ai' && password === 'admin') {
+          const adminUser = mockDb.getUserById('admin-uuid-1');
+          setUser(adminUser);
+          safeStorage.setItem('adviral_active_user', JSON.stringify(adminUser));
+          clearTimeout(loginTimeout);
+          setLoading(false);
+          return { success: true, user: adminUser };
+        }
 
-      const users = mockDb.getUsers();
-      const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+        const users = mockDb.getUsers();
+        const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
 
-      if (!foundUser) {
+        if (!foundUser) {
+          clearTimeout(loginTimeout);
+          setLoading(false);
+          return { success: false, error: 'No account found with this email.' };
+        }
+
+        if (foundUser.password !== password) {
+          clearTimeout(loginTimeout);
+          setLoading(false);
+          return { success: false, error: 'Incorrect password.' };
+        }
+
+        if (foundUser.is_banned) {
+          clearTimeout(loginTimeout);
+          setLoading(false);
+          return { success: false, error: 'This account has been banned by the administrator.' };
+        }
+
+        setUser(foundUser);
+        safeStorage.setItem('adviral_active_user', JSON.stringify(foundUser));
+        clearTimeout(loginTimeout);
         setLoading(false);
-        return { success: false, error: 'No account found with this email.' };
+        return { success: true, user: foundUser };
       }
-
-      if (foundUser.password !== password) {
-        setLoading(false);
-        return { success: false, error: 'Incorrect password.' };
-      }
-
-      if (foundUser.is_banned) {
-        setLoading(false);
-        return { success: false, error: 'This account has been banned by the administrator.' };
-      }
-
-      setUser(foundUser);
-      localStorage.setItem('adviral_active_user', JSON.stringify(foundUser));
+    } catch (err) {
+      clearTimeout(loginTimeout);
       setLoading(false);
-      return { success: true, user: foundUser };
+      return { success: false, error: err.message || 'Authentication error.' };
     }
   };
 
   const signup = async (name, email, password) => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const signupTimeout = setTimeout(() => {
+      console.warn("Signup request timed out. Forcing loading state release.");
+      setLoading(false);
+    }, 8000);
 
-    if (sessionMode === 'supabase') {
-      try {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      if (sessionMode === 'supabase') {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -258,6 +282,7 @@ export const AuthProvider = ({ children }) => {
         });
 
         if (error) {
+          clearTimeout(signupTimeout);
           setLoading(false);
           return { success: false, error: error.message };
         }
@@ -266,88 +291,116 @@ export const AuthProvider = ({ children }) => {
           // Trigger profile sync (wait slightly to let DB handle trigger insertion)
           await new Promise(resolve => setTimeout(resolve, 500));
           const syncRes = await syncSupabaseProfile(data.user.id, data.user.email);
+          clearTimeout(signupTimeout);
           setLoading(false);
           return syncRes;
         }
-      } catch (err) {
+      } else {
+        // Mock Sign Up Mode
+        const users = mockDb.getUsers();
+        const exists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
+
+        if (exists) {
+          clearTimeout(signupTimeout);
+          setLoading(false);
+          return { success: false, error: 'An account with this email already exists.' };
+        }
+
+        const newUser = mockDb.createUser({
+          name,
+          email,
+          password,
+          role: 'user',
+          credits: 50,
+          plan: 'Free',
+          is_banned: false,
+        });
+
+        setUser(newUser);
+        safeStorage.setItem('adviral_active_user', JSON.stringify(newUser));
+        clearTimeout(signupTimeout);
         setLoading(false);
-        return { success: false, error: err.message || 'Sign up exception occurred.' };
+        return { success: true, user: newUser };
       }
-    } else {
-      // Mock Sign Up Mode
-      const users = mockDb.getUsers();
-      const exists = users.some(u => u.email.toLowerCase() === email.toLowerCase());
-
-      if (exists) {
-        setLoading(false);
-        return { success: false, error: 'An account with this email already exists.' };
-      }
-
-      const newUser = mockDb.createUser({
-        name,
-        email,
-        password,
-        role: 'user',
-        credits: 50,
-        plan: 'Free',
-        is_banned: false,
-      });
-
-      setUser(newUser);
-      localStorage.setItem('adviral_active_user', JSON.stringify(newUser));
+    } catch (err) {
+      clearTimeout(signupTimeout);
       setLoading(false);
-      return { success: true, user: newUser };
+      return { success: false, error: err.message || 'Sign up exception occurred.' };
     }
   };
 
   const logout = async () => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    if (sessionMode === 'supabase') {
-      await supabase.auth.signOut();
+    const logoutTimeout = setTimeout(() => {
+      console.warn("Logout request timed out. Forcing loading state release.");
+      setLoading(false);
+    }, 8000);
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      if (sessionMode === 'supabase') {
+        await supabase.auth.signOut();
+      }
+      
+      setUser(null);
+      safeStorage.removeItem('adviral_active_user');
+      clearTimeout(logoutTimeout);
+      setLoading(false);
+      return { success: true };
+    } catch (err) {
+      console.error("Logout exception:", err);
+      setUser(null);
+      safeStorage.removeItem('adviral_active_user');
+      clearTimeout(logoutTimeout);
+      setLoading(false);
+      return { success: true };
     }
-    
-    setUser(null);
-    localStorage.removeItem('adviral_active_user');
-    setLoading(false);
-    return { success: true };
   };
 
   const googleLogin = async () => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1200));
+    const googleTimeout = setTimeout(() => {
+      console.warn("Google login timed out. Forcing loading state release.");
+      setLoading(false);
+    }, 8000);
 
-    if (sessionMode === 'supabase') {
-      try {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1200));
+
+      if (sessionMode === 'supabase') {
         const { error } = await supabase.auth.signInWithOAuth({
           provider: 'google',
         });
         if (error) {
+          clearTimeout(googleTimeout);
           setLoading(false);
           return { success: false, error: error.message };
         }
+        clearTimeout(googleTimeout);
         return { success: true }; // Vercel/Supabase will redirect automatically
-      } catch (e) {
-        setLoading(false);
-        return { success: false, error: e.message };
-      }
-    } else {
-      // Mock Google OAuth
-      const randomId = Math.floor(Math.random() * 10000);
-      const googleUser = mockDb.createUser({
-        name: `Google User #${randomId}`,
-        email: `google.user${randomId}@gmail.com`,
-        password: 'oauth-login',
-        role: 'user',
-        credits: 50,
-        plan: 'Free',
-      });
+      } else {
+        // Mock Google OAuth
+        const randomId = Math.floor(Math.random() * 10000);
+        const googleUser = mockDb.createUser({
+          name: `Google User #${randomId}`,
+          email: `google.user${randomId}@gmail.com`,
+          password: 'oauth-login',
+          role: 'user',
+          credits: 50,
+          plan: 'Free',
+        });
 
-      setUser(googleUser);
-      localStorage.setItem('adviral_active_user', JSON.stringify(googleUser));
+        setUser(googleUser);
+        safeStorage.setItem('adviral_active_user', JSON.stringify(googleUser));
+        clearTimeout(googleTimeout);
+        setLoading(false);
+        return { success: true, user: googleUser };
+      }
+    } catch (e) {
+      clearTimeout(googleTimeout);
       setLoading(false);
-      return { success: true, user: googleUser };
+      return { success: false, error: e.message };
     }
   };
 
@@ -378,7 +431,7 @@ export const AuthProvider = ({ children }) => {
         const freshUser = mockDb.getUserById(user.id);
         if (freshUser) {
           setUser(freshUser);
-          localStorage.setItem('adviral_active_user', JSON.stringify(freshUser));
+          safeStorage.setItem('adviral_active_user', JSON.stringify(freshUser));
         }
       }
     }
@@ -400,7 +453,7 @@ export const AuthProvider = ({ children }) => {
       const updated = mockDb.updateUser(user.id, { role: newRole });
       if (updated) {
         setUser(updated);
-        localStorage.setItem('adviral_active_user', JSON.stringify(updated));
+        safeStorage.setItem('adviral_active_user', JSON.stringify(updated));
       }
     }
   };

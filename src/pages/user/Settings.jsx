@@ -12,12 +12,13 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useDatabase } from '../../context/DatabaseContext';
 import Toast from '../../components/Toast';
+import { safeStorage } from '../../services/safeStorage';
 
 export const Settings = () => {
   const { user, setUser } = useAuth();
   const [name, setName] = useState(user?.name || '');
-  const [personalOpenAiKey, setPersonalOpenAiKey] = useState(localStorage.getItem(`adviral_personal_key_openai_${user?.id}`) || '');
-  const [personalGeminiKey, setPersonalGeminiKey] = useState(localStorage.getItem(`adviral_personal_key_gemini_${user?.id}`) || '');
+  const [personalOpenAiKey, setPersonalOpenAiKey] = useState(safeStorage.getItem(`adviral_personal_key_openai_${user?.id}`) || '');
+  const [personalGeminiKey, setPersonalGeminiKey] = useState(safeStorage.getItem(`adviral_personal_key_gemini_${user?.id}`) || '');
   
   const [formLoading, setFormLoading] = useState(false);
   const [toast, setToast] = useState(null);
@@ -37,20 +38,20 @@ export const Settings = () => {
     await new Promise(resolve => setTimeout(resolve, 800)); // Simulate save
 
     // Update in LocalStorage & local mock db
-    const users = JSON.parse(localStorage.getItem('adviral_users')) || [];
+    const users = JSON.parse(safeStorage.getItem('adviral_users')) || [];
     const index = users.findIndex(u => u.id === user.id);
     if (index !== -1) {
       users[index].name = name.trim();
-      localStorage.setItem('adviral_users', JSON.stringify(users));
+      safeStorage.setItem('adviral_users', JSON.stringify(users));
     }
 
     // Save personal keys
-    localStorage.setItem(`adviral_personal_key_openai_${user.id}`, personalOpenAiKey.trim());
-    localStorage.setItem(`adviral_personal_key_gemini_${user.id}`, personalGeminiKey.trim());
+    safeStorage.setItem(`adviral_personal_key_openai_${user.id}`, personalOpenAiKey.trim());
+    safeStorage.setItem(`adviral_personal_key_gemini_${user.id}`, personalGeminiKey.trim());
 
     const updatedUser = { ...user, name: name.trim() };
     setUser(updatedUser);
-    localStorage.setItem('adviral_active_user', JSON.stringify(updatedUser));
+    safeStorage.setItem('adviral_active_user', JSON.stringify(updatedUser));
     
     setFormLoading(false);
     showToast('Profile configuration updated successfully!', 'success');

@@ -18,6 +18,15 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   useEffect(() => {
+    // Bulletproof Safety Timeout: Force-set loading to false after 4.5 seconds
+    // to prevent any browser security/extensions/network hangs from locking the user out!
+    const safetyTimeout = setTimeout(() => {
+      console.warn("Safety trigger: Auth initialization took too long. Forcing loading screen termination.");
+      setLoading(false);
+    }, 4500);
+
+    let subscription = null;
+
     // Determine active session mode
     if (supabase) {
       setSessionMode('supabase');
@@ -41,13 +50,14 @@ export const AuthProvider = ({ children }) => {
           console.error("Error initializing session: ", err);
         } finally {
           setLoading(false);
+          clearTimeout(safetyTimeout);
         }
       };
 
       initSupabaseSession();
 
       // Listen to auth state transitions reactively
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
         try {
           if (session?.user) {
             // Only set loading to true if there is no user logged in yet.
@@ -70,12 +80,10 @@ export const AuthProvider = ({ children }) => {
           console.error("Auth state change error: ", err);
         } finally {
           setLoading(false);
+          clearTimeout(safetyTimeout);
         }
       });
-
-      return () => {
-        subscription.unsubscribe();
-      };
+      subscription = data?.subscription;
     } else {
       // Mock Fallback mode
       setSessionMode('mock');
@@ -98,7 +106,15 @@ export const AuthProvider = ({ children }) => {
         }
       }
       setLoading(false);
+      clearTimeout(safetyTimeout);
     }
+
+    return () => {
+      clearTimeout(safetyTimeout);
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
   // Helper to fetch custom profile details from public.profiles table in Supabase

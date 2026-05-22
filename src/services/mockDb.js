@@ -175,6 +175,67 @@ const DEFAULT_GENERATIONS = [
     credits_used: 1,
     is_saved: true,
     created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), // 3 hours ago
+  },
+  {
+    id: 'gen-4',
+    user_id: 'user-uuid-1',
+    tool_type: 'image_generator',
+    input_data: {
+      prompt: 'A premium product advertisement of an organic avocado face serum, glowing bottle resting on basalt stone with natural daylight, water droplets, realistic 8k, HSL colors',
+      style: 'Product Ad',
+      aspect_ratio: '1:1',
+      quality: 'HD',
+    },
+    generated_result: {
+      images: [
+        'https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?q=80&w=600&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?q=80&w=600&auto=format&fit=crop'
+      ],
+      prompt: 'A premium product advertisement of an organic avocado face serum, glowing bottle resting on basalt stone with natural daylight, water droplets, realistic 8k, HSL colors',
+      style: 'Product Ad',
+      aspect_ratio: '1:1',
+      credits_used: 5,
+      timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+    },
+    credits_used: 5,
+    is_saved: true,
+    created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'gen-5',
+    user_id: 'user-uuid-2',
+    tool_type: 'vision',
+    input_data: {
+      image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=600&auto=format&fit=crop',
+      question: 'Analyze this ad creative and give me marketing angles',
+    },
+    generated_result: {
+      image_url: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=600&auto=format&fit=crop',
+      question: 'Analyze this ad creative and give me marketing angles',
+      response: `### 🎨 Creative Analysis: Premium Athletic Footwear Ad
+This image showcases a striking, high-contrast product shot of a vibrant red athletic sneaker against a minimalist dark-textured background with dramatic spotlighting.
+
+#### ⚡ Core Visual Elements:
+- **Primary Subject**: A sleek, red performance shoe with clean white accents.
+- **Lighting**: Dramatic side-lighting casting deep shadows, highlighting the contours and mesh texture of the shoe.
+- **Color Psychology**: Red dominates the frame, triggering feelings of **urgency, energy, passion, and high athletic performance**. The dark background creates high contrast, making the product pop instantly.
+
+#### 📈 Strategic Marketing Angles:
+1. **The Performance Hook (Energy & Speed)**:
+   * *Copy Angle*: "Power your stride. Engineered for runners who demand maximum responsiveness and zero compromises."
+   * *Headline*: "Don't Just Run. Ignite Your Path. ⚡"
+2. **The Aesthetic & Lifestyle Frame**:
+   * *Copy Angle*: "Sleek enough for the streets, durable enough for the track. Turn heads wherever you step with a bold statement of velocity."
+   * *Headline*: "Bold Aesthetics Meet Precision Engineering. 👟"
+3. **The Urgency/FOMO Hook**:
+   * *Copy Angle*: "Our highest-demand colorway is back in stock, but not for long. Elevate your footwear game before it sells out again."
+   * *Headline*: "Ignite Your Fit. Limited Stock Remaining. 🔥"`,
+      credits_used: 2,
+      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    },
+    credits_used: 2,
+    is_saved: false,
+    created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
   }
 ];
 

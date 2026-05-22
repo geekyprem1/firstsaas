@@ -9,7 +9,9 @@ import {
   Save, 
   Gift, 
   RefreshCw,
-  CoinsIcon
+  CoinsIcon,
+  Image as ImageIcon,
+  Eye
 } from 'lucide-react';
 import { useDatabase } from '../../context/DatabaseContext';
 import Toast from '../../components/Toast';
@@ -33,6 +35,15 @@ export const CreditManagement = () => {
   const [costScripts, setCostScripts] = useState(
     parseInt(safeStorage.getItem('adviral_config_cost_ugc_scripts')) || 1
   );
+  const [costImageGen, setCostImageGen] = useState(
+    parseInt(safeStorage.getItem('adviral_config_cost_image_generator')) ?? 5
+  );
+  const [costVision, setCostVision] = useState(
+    parseInt(safeStorage.getItem('adviral_config_cost_ai_vision')) ?? 2
+  );
+  const [enableImageTools, setEnableImageTools] = useState(
+    safeStorage.getItem('adviral_config_enable_image_tools') !== 'false'
+  );
 
   // Global operations state
   const [bulkBonus, setBulkBonus] = useState('');
@@ -53,9 +64,12 @@ export const CreditManagement = () => {
     safeStorage.setItem('adviral_config_cost_ad_generator', costAd.toString());
     safeStorage.setItem('adviral_config_cost_viral_hooks', costHooks.toString());
     safeStorage.setItem('adviral_config_cost_ugc_scripts', costScripts.toString());
+    safeStorage.setItem('adviral_config_cost_image_generator', costImageGen.toString());
+    safeStorage.setItem('adviral_config_cost_ai_vision', costVision.toString());
+    safeStorage.setItem('adviral_config_enable_image_tools', enableImageTools.toString());
 
     setFormLoading(false);
-    showToast('Platform credit configurations updated successfully!', 'success');
+    showToast('Platform configurations and credit cost rates updated!', 'success');
   };
 
   const handleGlobalGift = async (e) => {
@@ -195,6 +209,61 @@ export const CreditManagement = () => {
                 <span className="text-[10px] text-gray-500 uppercase tracking-widest font-black select-none">Credits</span>
               </div>
             </div>
+
+            {/* Tool 4: AI Image Generator */}
+            <div className="flex items-center justify-between p-3.5 bg-black/40 border border-purple-500/10 rounded-xl">
+              <div className="flex items-center gap-3 select-none">
+                <ImageIcon className="w-4 h-4 text-purple-400 shrink-0" />
+                <span className="text-xs font-bold text-gray-200">AI Image Generator</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  required
+                  value={costImageGen}
+                  onChange={(e) => setCostImageGen(parseInt(e.target.value) || 0)}
+                  className="w-16 bg-[#120a1f] border border-purple-500/15 focus:border-purple-500/40 rounded-lg py-1 px-2 text-xs text-center text-white focus:outline-none font-bold"
+                />
+                <span className="text-[10px] text-gray-500 uppercase tracking-widest font-black select-none">Credits</span>
+              </div>
+            </div>
+
+            {/* Tool 5: AI Vision Auditor */}
+            <div className="flex items-center justify-between p-3.5 bg-black/40 border border-purple-500/10 rounded-xl">
+              <div className="flex items-center gap-3 select-none">
+                <Eye className="w-4 h-4 text-purple-400 shrink-0" />
+                <span className="text-xs font-bold text-gray-200">AI Vision auditor</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  required
+                  value={costVision}
+                  onChange={(e) => setCostVision(parseInt(e.target.value) || 0)}
+                  className="w-16 bg-[#120a1f] border border-purple-500/15 focus:border-purple-500/40 rounded-lg py-1 px-2 text-xs text-center text-white focus:outline-none font-bold"
+                />
+                <span className="text-[10px] text-gray-500 uppercase tracking-widest font-black select-none">Credits</span>
+              </div>
+            </div>
+
+            {/* Global Switch: Enable Image & Vision tools */}
+            <div className="flex items-center justify-between p-3.5 bg-purple-950/20 border border-purple-500/15 rounded-xl">
+              <div className="flex flex-col text-left select-none max-w-[70%]">
+                <span className="text-xs font-bold text-purple-200">Enable Premium Image Tools</span>
+                <span className="text-[9px] text-gray-500 font-semibold leading-normal mt-0.5">
+                  Globally show or hide AI Image Generator and AI Vision menus on user dashboards.
+                </span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer select-none">
+                <input 
+                  type="checkbox" 
+                  checked={enableImageTools}
+                  onChange={(e) => setEnableImageTools(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-black/50 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-400 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600 peer-checked:after:bg-white" />
+              </label>
+            </div>
           </div>
 
           {/* Commit Save */}
@@ -208,7 +277,7 @@ export const CreditManagement = () => {
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                Save Credit Configuration
+                Save Platform Configurations
               </>
             )}
           </button>

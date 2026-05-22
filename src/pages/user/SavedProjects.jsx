@@ -95,6 +95,10 @@ export const SavedProjects = ({ selectedProject, onClearSelectedProject }) => {
         return <span className="text-[10px] bg-amber-500/10 border border-amber-500/25 text-amber-400 font-bold px-2 py-0.5 rounded-full select-none uppercase shrink-0">Hooks</span>;
       case 'ugc_scripts':
         return <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 font-bold px-2 py-0.5 rounded-full select-none uppercase shrink-0">UGC Script</span>;
+      case 'image_generator':
+        return <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 font-bold px-2 py-0.5 rounded-full select-none uppercase shrink-0">AI Image</span>;
+      case 'vision':
+        return <span className="text-[10px] bg-rose-500/10 border border-rose-500/25 text-rose-400 font-bold px-2 py-0.5 rounded-full select-none uppercase shrink-0">AI Vision</span>;
       default:
         return <span className="text-[10px] bg-gray-500/10 border border-gray-500/25 text-gray-400 font-bold px-2 py-0.5 rounded-full select-none uppercase shrink-0">Tool</span>;
     }
@@ -155,10 +159,12 @@ export const SavedProjects = ({ selectedProject, onClearSelectedProject }) => {
             onChange={(e) => setFilterType(e.target.value)}
             className="bg-[#120a1f] border border-purple-500/15 focus:border-purple-500/40 rounded-xl py-1.5 px-3 text-xs text-purple-300 focus:outline-none cursor-pointer"
           >
-            <option value="all">All Copy Tools</option>
+            <option value="all">All AI Tools</option>
             <option value="ad_generator">AI Ad Builder</option>
             <option value="viral_hooks">Viral Hooks</option>
             <option value="ugc_scripts">UGC Scripts</option>
+            <option value="image_generator">AI Image Generator</option>
+            <option value="vision">AI Vision Auditor</option>
           </select>
         </div>
       </div>
@@ -402,6 +408,110 @@ export const SavedProjects = ({ selectedProject, onClearSelectedProject }) => {
                       </div>
                     );
                   })}
+                </div>
+              )}
+
+              {/* Case 4: AI Image Generator Outputs */}
+              {activeModalGen.tool_type === 'image_generator' && (
+                <div className="space-y-4 text-left">
+                  <div className="flex justify-between items-center select-none">
+                    <span className="text-xs font-black uppercase text-purple-400 tracking-wider">Visual Assets Generated</span>
+                    <button
+                      onClick={() => handleCopyText(activeModalGen.input_data.prompt || activeModalGen.generated_result?.prompt, 'prompt_copy')}
+                      className="flex items-center gap-1 text-[10px] text-purple-300 hover:text-purple-200 font-extrabold cursor-pointer"
+                    >
+                      {copiedKey === 'prompt_copy' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      Copy Prompt
+                    </button>
+                  </div>
+                  
+                  <div className="p-3 bg-black/40 border border-purple-500/10 rounded-xl text-xs text-gray-300 break-words leading-relaxed">
+                    <strong className="text-purple-400">Prompt: </strong>
+                    {activeModalGen.input_data.prompt || activeModalGen.generated_result?.prompt}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {activeModalGen.generated_result?.images?.map((imgUrl, idx) => (
+                      <div key={idx} className="relative group overflow-hidden rounded-xl border border-purple-500/10 aspect-square bg-[#0b0513] select-none">
+                        <img 
+                          src={imgUrl} 
+                          alt={`Creative ${idx + 1}`} 
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2 p-2">
+                          <button
+                            onClick={() => window.open(imgUrl, '_blank')}
+                            className="px-3 py-1.5 bg-purple-950/80 hover:bg-purple-900 border border-purple-500/20 text-purple-300 rounded-lg text-[10px] font-bold cursor-pointer"
+                          >
+                            Expand
+                          </button>
+                          <button
+                            onClick={async () => {
+                              try {
+                                showToast('Downloading image...', 'info');
+                                const res = await fetch(imgUrl);
+                                const blob = await res.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `adviral-image-${idx + 1}.png`;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                window.URL.revokeObjectURL(url);
+                              } catch(e) {
+                                window.open(imgUrl, '_blank');
+                              }
+                            }}
+                            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-[10px] font-bold cursor-pointer shadow-md"
+                          >
+                            Download
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Case 5: AI Vision Auditor Outputs */}
+              {activeModalGen.tool_type === 'vision' && (
+                <div className="space-y-4 text-left">
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                    {/* Visual Asset audited */}
+                    {activeModalGen.input_data.image_url && (
+                      <div className="md:col-span-4 rounded-xl border border-purple-500/10 overflow-hidden bg-[#0b0513] max-h-[200px]">
+                        <img 
+                          src={activeModalGen.input_data.image_url} 
+                          alt="Audited Creative" 
+                          className="w-full h-full object-contain max-h-[200px]"
+                        />
+                      </div>
+                    )}
+                    
+                    {/* Audit query & response */}
+                    <div className="md:col-span-8 space-y-3">
+                      <div className="bg-purple-950/15 border border-purple-500/10 rounded-xl p-3">
+                        <span className="text-[9px] uppercase tracking-wider text-purple-400 font-bold block select-none">Auditor Query</span>
+                        <p className="text-xs font-bold text-gray-300 mt-1">{activeModalGen.input_data.question}</p>
+                      </div>
+
+                      <div className="flex justify-between items-center select-none pt-1">
+                        <span className="text-xs font-black uppercase text-purple-400 tracking-wider">Audit Analysis Report</span>
+                        <button
+                          onClick={() => handleCopyText(activeModalGen.generated_result?.response, 'report_copy')}
+                          className="flex items-center gap-1 text-[10px] text-purple-300 hover:text-purple-200 font-extrabold cursor-pointer"
+                        >
+                          {copiedKey === 'report_copy' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                          Copy Report
+                        </button>
+                      </div>
+
+                      <div className="p-4 bg-black/40 border border-purple-500/5 rounded-xl text-xs text-gray-300 leading-relaxed font-mono max-h-[240px] overflow-y-auto whitespace-pre-wrap">
+                        {activeModalGen.generated_result?.response}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

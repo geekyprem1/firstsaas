@@ -12,7 +12,8 @@ import {
   FileText,
   User,
   Clock,
-  ArrowRight
+  ArrowRight,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useDatabase } from '../../context/DatabaseContext';
 import Modal from '../../components/Modal';
@@ -51,6 +52,18 @@ export const GenerationsLog = () => {
         return (
           <span className="flex items-center gap-1 text-[10px] bg-blue-950/60 border border-blue-500/25 text-blue-300 px-2 py-0.5 rounded-full font-bold select-none">
             <Clapperboard className="w-3 h-3 text-blue-400" /> UGC Scripts
+          </span>
+        );
+      case 'image_generator':
+        return (
+          <span className="flex items-center gap-1 text-[10px] bg-emerald-950/60 border border-emerald-500/25 text-emerald-300 px-2 py-0.5 rounded-full font-bold select-none">
+            <ImageIcon className="w-3 h-3 text-emerald-400" /> AI Image Gen
+          </span>
+        );
+      case 'vision':
+        return (
+          <span className="flex items-center gap-1 text-[10px] bg-sky-950/60 border border-sky-500/25 text-sky-300 px-2 py-0.5 rounded-full font-bold select-none">
+            <Eye className="w-3 h-3 text-sky-400" /> AI Vision Audit
           </span>
         );
       default:
@@ -105,7 +118,9 @@ export const GenerationsLog = () => {
     const searchMatch = 
       user.name.toLowerCase().includes(search.toLowerCase()) ||
       user.email.toLowerCase().includes(search.toLowerCase()) ||
-      (gen.input_data?.product_name || '').toLowerCase().includes(search.toLowerCase());
+      (gen.input_data?.product_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (gen.input_data?.prompt || '').toLowerCase().includes(search.toLowerCase()) ||
+      (gen.input_data?.question || '').toLowerCase().includes(search.toLowerCase());
       
     const toolMatch = toolFilter === 'all' || gen.tool_type === toolFilter;
     
@@ -151,6 +166,8 @@ export const GenerationsLog = () => {
           <option value="ad_generator">AI Ad Generator</option>
           <option value="viral_hooks">Viral Hook Builder</option>
           <option value="ugc_scripts">UGC Scripting Studio</option>
+          <option value="image_generator">AI Image Generator</option>
+          <option value="vision">AI Vision Auditor</option>
         </select>
       </div>
 
@@ -203,7 +220,7 @@ export const GenerationsLog = () => {
                         {getProviderBadge(gen)}
                       </td>
                       <td className="p-4 text-gray-300 font-bold truncate max-w-[180px]">
-                        {gen.input_data?.product_name || 'N/A'}
+                        {gen.input_data?.product_name || gen.input_data?.prompt || gen.input_data?.question || 'N/A'}
                       </td>
                       <td className="p-4 text-gray-400 whitespace-nowrap">
                         {displayDate}
@@ -341,6 +358,74 @@ export const GenerationsLog = () => {
                         )}
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {selectedGen.tool_type === 'image_generator' && (
+                  <div className="space-y-4 font-sans text-xs">
+                    <span className="text-purple-400 font-bold select-none block">[Generated Creative Images]</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {selectedGen.generated_result?.images?.map((imgUrl, idx) => (
+                        <div key={idx} className="relative group overflow-hidden rounded-xl border border-purple-500/10 aspect-square bg-[#0b0513] select-none">
+                          <img 
+                            src={imgUrl} 
+                            alt={`Creative ${idx + 1}`} 
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2 p-2">
+                            <button
+                              onClick={() => window.open(imgUrl, '_blank')}
+                              className="px-3 py-1.5 bg-purple-950/80 hover:bg-purple-900 border border-purple-500/20 text-purple-300 rounded-lg text-[10px] font-bold cursor-pointer"
+                            >
+                              Expand
+                            </button>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch(imgUrl);
+                                  const blob = await res.blob();
+                                  const url = window.URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `adviral-image-${idx + 1}.png`;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  document.body.removeChild(a);
+                                  window.URL.revokeObjectURL(url);
+                                } catch(e) {
+                                  window.open(imgUrl, '_blank');
+                                }
+                              }}
+                              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-[10px] font-bold cursor-pointer shadow-md"
+                            >
+                              Download
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedGen.tool_type === 'vision' && (
+                  <div className="space-y-4 font-sans text-xs">
+                    <span className="text-purple-400 font-bold select-none block">[Creative Vision Audit Analysis]</span>
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                      {selectedGen.input_data?.image_url && (
+                        <div className="md:col-span-4 rounded-xl border border-purple-500/10 overflow-hidden bg-[#0b0513] max-h-[160px]">
+                          <img 
+                            src={selectedGen.input_data.image_url} 
+                            alt="Audited Creative" 
+                            className="w-full h-full object-contain max-h-[160px]"
+                          />
+                        </div>
+                      )}
+                      <div className="md:col-span-8 space-y-3">
+                        <div className="p-3 bg-black/40 border border-purple-500/5 rounded-xl text-gray-300 whitespace-pre-wrap leading-relaxed max-h-[220px] overflow-y-auto font-mono">
+                          {selectedGen.generated_result?.response}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

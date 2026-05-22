@@ -12,7 +12,9 @@ import {
   TrendingDown,
   Percent,
   Calendar,
-  Coins
+  Coins,
+  Image as ImageIcon,
+  Eye
 } from 'lucide-react';
 import { useDatabase } from '../../context/DatabaseContext';
 
@@ -43,7 +45,7 @@ export const Analytics = () => {
   const toolCounts = generations.reduce((acc, gen) => {
     acc[gen.tool_type] = (acc[gen.tool_type] || 0) + 1;
     return acc;
-  }, { ad_generator: 0, viral_hooks: 0, ugc_scripts: 0 });
+  }, { ad_generator: 0, viral_hooks: 0, ugc_scripts: 0, image_generator: 0, vision: 0 });
 
   const popularTools = [
     { 
@@ -69,6 +71,22 @@ export const Analytics = () => {
       icon: <Clapperboard className="w-4 h-4 text-blue-400" />,
       colorClass: 'from-blue-600 to-cyan-500',
       description: 'Problem-solution structured testimonials & script visuals'
+    },
+    { 
+      id: 'image_generator', 
+      label: 'AI Image Generator', 
+      count: toolCounts.image_generator,
+      icon: <ImageIcon className="w-4 h-4 text-emerald-400" />,
+      colorClass: 'from-emerald-600 to-teal-500',
+      description: 'Creative photorealistic, cinematic, and styled product images'
+    },
+    { 
+      id: 'vision', 
+      label: 'AI Vision Auditor', 
+      count: toolCounts.vision,
+      icon: <Eye className="w-4 h-4 text-sky-400" />,
+      colorClass: 'from-sky-500 to-blue-600',
+      description: 'Multimodal marketing creative strategic reviews & audience mapping'
     }
   ].sort((a, b) => b.count - a.count);
 

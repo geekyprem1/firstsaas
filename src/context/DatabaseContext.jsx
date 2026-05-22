@@ -179,7 +179,7 @@ export const DatabaseProvider = ({ children }) => {
     }
   };
 
-  const addGeneration = async (toolType, inputData, generatedResult, userId) => {
+  const addGeneration = async (toolType, inputData, generatedResult, userId, creditsUsed = 1) => {
     if (sessionMode === 'supabase' && supabase) {
       try {
         const { data, error } = await supabase
@@ -190,7 +190,7 @@ export const DatabaseProvider = ({ children }) => {
               tool_type: toolType,
               input_data: inputData,
               generated_result: generatedResult,
-              credits_used: 1,
+              credits_used: creditsUsed,
               is_saved: false,
             }
           ])
@@ -211,7 +211,7 @@ export const DatabaseProvider = ({ children }) => {
         tool_type: toolType,
         input_data: inputData,
         generated_result: generatedResult,
-        credits_used: 1,
+        credits_used: creditsUsed,
       });
       refreshAllData();
       return newGen;

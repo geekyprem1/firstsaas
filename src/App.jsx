@@ -16,6 +16,8 @@ import UGCScriptGenerator from './pages/user/UGCScriptGenerator';
 import SavedProjects from './pages/user/SavedProjects';
 import Billing from './pages/user/Billing';
 import Settings from './pages/user/Settings';
+import ImageGenerator from './pages/user/ImageGenerator';
+import Vision from './pages/user/Vision';
 
 // Admin Views
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -170,6 +172,10 @@ const AppContent = () => {
         return <HookGenerator />;
       case 'ugc_scripts':
         return <UGCScriptGenerator />;
+      case 'image_generator':
+        return <ImageGenerator />;
+      case 'vision':
+        return <Vision />;
       case 'saved_projects':
         return <SavedProjects />;
       case 'billing':

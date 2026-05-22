@@ -15,9 +15,12 @@ import {
   History,
   TrendingUp,
   ShieldCheck,
-  UserCheck
+  UserCheck,
+  Image as ImageIcon,
+  Eye
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { safeStorage } from '../services/safeStorage';
 
 export const Sidebar = ({ activeView, onViewChange, mobileOpen, setMobileOpen }) => {
   const { user, logout, switchUserRole } = useAuth();
@@ -41,11 +44,17 @@ export const Sidebar = ({ activeView, onViewChange, mobileOpen, setMobileOpen })
   };
 
   // Navigations Definitions
+  const imageToolsEnabled = safeStorage.getItem('adviral_config_enable_image_tools') !== 'false';
+
   const userNav = [
     { id: 'user_dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
     { id: 'ad_generator', label: 'AI Ad Generator', icon: <Sparkles className="w-5 h-5" /> },
     { id: 'viral_hooks', label: 'Viral Hooks', icon: <Flame className="w-5 h-5" /> },
     { id: 'ugc_scripts', label: 'UGC Scripts', icon: <Clapperboard className="w-5 h-5" /> },
+    ...(imageToolsEnabled ? [
+      { id: 'image_generator', label: 'AI Image Generator', icon: <ImageIcon className="w-5 h-5" /> },
+      { id: 'vision', label: 'AI Vision', icon: <Eye className="w-5 h-5" /> }
+    ] : []),
     { id: 'saved_projects', label: 'Saved Projects', icon: <FolderHeart className="w-5 h-5" /> },
     { id: 'billing', label: 'Billing & Pricing', icon: <CreditCard className="w-5 h-5" /> },
     { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },

@@ -59,11 +59,14 @@ export const AuthProvider = ({ children }) => {
           setUser(loadedUser);
         }
       } else {
-        // Auto seed normal creator alex for smooth developer testing experience
-        const alex = mockDb.getUsers().find(u => u.email === 'alex@example.com');
-        if (alex) {
-          setUser(alex);
-          safeStorage.setItem('adviral_active_user', JSON.stringify(alex));
+        // Auto seed normal creator alex for smooth developer testing experience ONLY if they haven't explicitly logged out
+        const hasLoggedOut = safeStorage.getItem('adviral_has_logged_out');
+        if (hasLoggedOut !== 'true') {
+          const alex = mockDb.getUsers().find(u => u.email === 'alex@example.com');
+          if (alex) {
+            setUser(alex);
+            safeStorage.setItem('adviral_active_user', JSON.stringify(alex));
+          }
         }
       }
       setLoading(false);
@@ -81,7 +84,10 @@ export const AuthProvider = ({ children }) => {
         
         // Double check if a mock user is active to prevent supabase null session event from overriding
         const currentSessionMode = safeStorage.getItem('adviral_session_mode');
-        if (currentSessionMode === 'mock') {
+        const activeUser = userRef.current;
+        const isMockUser = activeUser && activeUser.id && (activeUser.id.startsWith('admin-') || activeUser.id.startsWith('user-'));
+        
+        if (currentSessionMode === 'mock' || isMockUser) {
           console.log("Supabase Auth change ignored: Active user is in mock mode.");
           if (!isInitialized) {
             isInitialized = true;
@@ -240,6 +246,7 @@ export const AuthProvider = ({ children }) => {
         // Dynamically switch session mode to mock
         setSessionMode('mock');
         safeStorage.setItem('adviral_session_mode', 'mock');
+        safeStorage.removeItem('adviral_has_logged_out');
         setUser(matchedMockUser);
         safeStorage.setItem('adviral_active_user', JSON.stringify(matchedMockUser));
         clearTimeout(loginTimeout);
@@ -261,6 +268,7 @@ export const AuthProvider = ({ children }) => {
 
         if (data.user) {
           safeStorage.setItem('adviral_session_mode', 'supabase');
+          safeStorage.removeItem('adviral_has_logged_out');
           const syncRes = await syncSupabaseProfile(data.user.id, data.user.email);
           clearTimeout(loginTimeout);
           setLoading(false);
@@ -290,6 +298,7 @@ export const AuthProvider = ({ children }) => {
 
         setSessionMode('mock');
         safeStorage.setItem('adviral_session_mode', 'mock');
+        safeStorage.removeItem('adviral_has_logged_out');
         setUser(foundUser);
         safeStorage.setItem('adviral_active_user', JSON.stringify(foundUser));
         clearTimeout(loginTimeout);
@@ -387,6 +396,7 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       safeStorage.removeItem('adviral_active_user');
       safeStorage.removeItem('adviral_session_mode');
+      safeStorage.setItem('adviral_has_logged_out', 'true');
       
       if (supabase) {
         setSessionMode('supabase');
@@ -402,6 +412,7 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       safeStorage.removeItem('adviral_active_user');
       safeStorage.removeItem('adviral_session_mode');
+      safeStorage.setItem('adviral_has_logged_out', 'true');
       
       if (supabase) {
         setSessionMode('supabase');

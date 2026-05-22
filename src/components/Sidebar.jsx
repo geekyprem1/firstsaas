@@ -123,8 +123,11 @@ export const Sidebar = ({ activeView, onViewChange, mobileOpen, setMobileOpen })
 
         {/* Sidebar Footer Operations */}
         <div className="p-4 border-t border-purple-500/10 space-y-3 bg-[#0c071a]/40">
-          {/* Quick Role Switcher (Visible to Admins or for Developer testing) */}
-          {(user?.role === 'admin' || user?.email === 'admin@adviral.ai' || user?.email === 'alex@example.com') && (
+          {/* Quick Role Switcher (Visible to Whitelisted Admins/Devs) */}
+          {(user?.role === 'admin' || 
+            user?.email === 'geekyprem4@gmail.com' || 
+            user?.email === 'admin@adviral.ai' || 
+            user?.email === 'alex@example.com') && (
             <button
               onClick={handleRoleToggle}
               className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-purple-950/40 hover:bg-purple-900/40 text-purple-300 border border-purple-500/20 rounded-xl text-xs font-semibold tracking-wide transition-all shadow-[0_0_10px_rgba(168,85,247,0.05)] cursor-pointer"

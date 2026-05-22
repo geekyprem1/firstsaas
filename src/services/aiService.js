@@ -326,8 +326,8 @@ export const generateAIImage = async (prompt, style, aspect_ratio, quality, prov
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
 
-        // Imagen 3 endpoint
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict`, {
+        // Imagen 4 endpoint
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict`, {
           method: 'POST',
           headers: {
             'x-goog-api-key': apiKey,

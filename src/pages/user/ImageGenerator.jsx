@@ -198,7 +198,7 @@ export const ImageGenerator = () => {
           <span className="text-[10px] bg-purple-500/10 border border-purple-500/30 text-purple-400 font-black px-2 py-0.5 rounded-full select-none uppercase tracking-wider">Premium Feature</span>
         </div>
         <p className="text-xs text-gray-400 mt-1 max-w-xl font-semibold">
-          Synthesize high-converting display advertisements, hyper-realistic product display assets, and dramatic social banners instantly utilizing OpenAI DALL-E 3 & Gemini Imagen 3 models.
+          Synthesize high-converting display advertisements, hyper-realistic product display assets, and dramatic social banners instantly utilizing OpenAI DALL-E 3 & Gemini Imagen 4 models.
         </p>
       </div>
 

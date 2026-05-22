@@ -28,9 +28,49 @@ export const AuthProvider = ({ children }) => {
 
     let subscription = null;
 
+    // Check if there is an active mock session in safeStorage
+    const storedUserStr = safeStorage.getItem('adviral_active_user');
+    const storedSessionMode = safeStorage.getItem('adviral_session_mode');
+    
+    let isMockSession = false;
+    let loadedUser = null;
+    
+    if (storedUserStr) {
+      try {
+        const parsed = JSON.parse(storedUserStr);
+        if (storedSessionMode === 'mock' || (parsed && parsed.id && (parsed.id.startsWith('admin-') || parsed.id.startsWith('user-')))) {
+          isMockSession = true;
+          loadedUser = parsed;
+        }
+      } catch (e) {
+        console.warn("Failed to parse stored active user on mount:", e);
+      }
+    }
+
     // Determine active session mode
-    if (supabase) {
+    if (isMockSession || !supabase) {
+      setSessionMode('mock');
+      if (loadedUser) {
+        const freshUser = mockDb.getUserById(loadedUser.id);
+        if (freshUser) {
+          setUser(freshUser);
+          safeStorage.setItem('adviral_active_user', JSON.stringify(freshUser));
+        } else {
+          setUser(loadedUser);
+        }
+      } else {
+        // Auto seed normal creator alex for smooth developer testing experience
+        const alex = mockDb.getUsers().find(u => u.email === 'alex@example.com');
+        if (alex) {
+          setUser(alex);
+          safeStorage.setItem('adviral_active_user', JSON.stringify(alex));
+        }
+      }
+      setLoading(false);
+      clearTimeout(safetyTimeout);
+    } else {
       setSessionMode('supabase');
+      safeStorage.setItem('adviral_session_mode', 'supabase');
       
       let isInitialized = false;
 
@@ -38,6 +78,19 @@ export const AuthProvider = ({ children }) => {
       // In Supabase v2, onAuthStateChange fires immediately upon subscription with the initial session.
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
         console.log(`Supabase Auth Transition Event: ${event}`);
+        
+        // Double check if a mock user is active to prevent supabase null session event from overriding
+        const currentSessionMode = safeStorage.getItem('adviral_session_mode');
+        if (currentSessionMode === 'mock') {
+          console.log("Supabase Auth change ignored: Active user is in mock mode.");
+          if (!isInitialized) {
+            isInitialized = true;
+            setLoading(false);
+            clearTimeout(safetyTimeout);
+          }
+          return;
+        }
+
         try {
           if (session?.user) {
             // Sync the user profile from Supabase
@@ -64,34 +117,6 @@ export const AuthProvider = ({ children }) => {
         }
       });
       subscription = data?.subscription;
-    } else {
-      // Mock Fallback mode
-      setSessionMode('mock');
-      const storedUser = safeStorage.getItem('adviral_active_user');
-      if (storedUser) {
-        try {
-          const parsed = JSON.parse(storedUser);
-          const freshUser = mockDb.getUserById(parsed.id);
-          if (freshUser) {
-            setUser(freshUser);
-            safeStorage.setItem('adviral_active_user', JSON.stringify(freshUser));
-          } else {
-            setUser(parsed);
-          }
-        } catch (e) {
-          console.warn("Failed to parse stored active user:", e);
-          safeStorage.removeItem('adviral_active_user');
-        }
-      } else {
-        // Auto seed normal creator alex for smooth developer testing experience
-        const alex = mockDb.getUsers().find(u => u.email === 'alex@example.com');
-        if (alex) {
-          setUser(alex);
-          safeStorage.setItem('adviral_active_user', JSON.stringify(alex));
-        }
-      }
-      setLoading(false);
-      clearTimeout(safetyTimeout);
     }
 
     return () => {
@@ -199,7 +224,30 @@ export const AuthProvider = ({ children }) => {
     try {
       await new Promise(resolve => setTimeout(resolve, 800)); // Network delay simulation
 
-      if (sessionMode === 'supabase') {
+      // Intercept mock accounts first (even if supabase is initialized)
+      const mockUsers = mockDb.getUsers();
+      const matchedMockUser = mockUsers.find(
+        u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+      );
+
+      if (matchedMockUser) {
+        if (matchedMockUser.is_banned) {
+          clearTimeout(loginTimeout);
+          setLoading(false);
+          return { success: false, error: 'This account has been banned by the administrator.' };
+        }
+        
+        // Dynamically switch session mode to mock
+        setSessionMode('mock');
+        safeStorage.setItem('adviral_session_mode', 'mock');
+        setUser(matchedMockUser);
+        safeStorage.setItem('adviral_active_user', JSON.stringify(matchedMockUser));
+        clearTimeout(loginTimeout);
+        setLoading(false);
+        return { success: true, user: matchedMockUser };
+      }
+
+      if (sessionMode === 'supabase' && supabase) {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -212,24 +260,15 @@ export const AuthProvider = ({ children }) => {
         }
 
         if (data.user) {
+          safeStorage.setItem('adviral_session_mode', 'supabase');
           const syncRes = await syncSupabaseProfile(data.user.id, data.user.email);
           clearTimeout(loginTimeout);
           setLoading(false);
           return syncRes;
         }
       } else {
-        // Mock Login Mode
-        if (email === 'admin@adviral.ai' && password === 'admin') {
-          const adminUser = mockDb.getUserById('admin-uuid-1');
-          setUser(adminUser);
-          safeStorage.setItem('adviral_active_user', JSON.stringify(adminUser));
-          clearTimeout(loginTimeout);
-          setLoading(false);
-          return { success: true, user: adminUser };
-        }
-
-        const users = mockDb.getUsers();
-        const foundUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+        // Mock Fallback Login Mode
+        const foundUser = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
 
         if (!foundUser) {
           clearTimeout(loginTimeout);
@@ -249,6 +288,8 @@ export const AuthProvider = ({ children }) => {
           return { success: false, error: 'This account has been banned by the administrator.' };
         }
 
+        setSessionMode('mock');
+        safeStorage.setItem('adviral_session_mode', 'mock');
         setUser(foundUser);
         safeStorage.setItem('adviral_active_user', JSON.stringify(foundUser));
         clearTimeout(loginTimeout);
@@ -339,12 +380,20 @@ export const AuthProvider = ({ children }) => {
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      if (sessionMode === 'supabase') {
+      if (sessionMode === 'supabase' && supabase) {
         await supabase.auth.signOut();
       }
       
       setUser(null);
       safeStorage.removeItem('adviral_active_user');
+      safeStorage.removeItem('adviral_session_mode');
+      
+      if (supabase) {
+        setSessionMode('supabase');
+      } else {
+        setSessionMode('mock');
+      }
+      
       clearTimeout(logoutTimeout);
       setLoading(false);
       return { success: true };
@@ -352,6 +401,14 @@ export const AuthProvider = ({ children }) => {
       console.error("Logout exception:", err);
       setUser(null);
       safeStorage.removeItem('adviral_active_user');
+      safeStorage.removeItem('adviral_session_mode');
+      
+      if (supabase) {
+        setSessionMode('supabase');
+      } else {
+        setSessionMode('mock');
+      }
+      
       clearTimeout(logoutTimeout);
       setLoading(false);
       return { success: true };

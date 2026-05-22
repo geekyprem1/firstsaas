@@ -2,6 +2,73 @@
 // Supports actual API requests to OpenAI / Gemini if keys are provided,
 // and features an advanced context-aware semantic copy compiler fallback.
 
+const getPromptForTool = (toolType, inputData) => {
+  const {
+    product_name = 'My Product',
+    product_description = 'An amazing solution.',
+    target_audience = 'SaaS enthusiasts',
+    platform = 'Facebook',
+    tone = 'Bold',
+    cta_style = 'Shop Now'
+  } = inputData;
+
+  let schemaPrompt = '';
+  if (toolType === 'ad_generator') {
+    schemaPrompt = `The output JSON MUST have exactly this structure:
+{
+  "headlines": ["Headline 1", "Headline 2", "Headline 3"],
+  "hooks": ["Hook 1", "Hook 2", "Hook 3"],
+  "copy": "Detailed, highly persuasive ad copy text with emojis (multiple paragraphs)",
+  "ctas": ["CTA 1", "CTA 2"],
+  "viral_angles": ["Angle 1", "Angle 2", "Angle 3"]
+}`;
+  } else if (toolType === 'viral_hooks') {
+    schemaPrompt = `The output JSON MUST have exactly this structure:
+{
+  "curiosity_hooks": ["Curiosity Hook 1", "Curiosity Hook 2", "Curiosity Hook 3"],
+  "emotional_hooks": ["Emotional Hook 1", "Emotional Hook 2", "Emotional Hook 3"],
+  "fear_hooks": ["FOMO Hook 1", "FOMO Hook 2", "FOMO Hook 3"],
+  "viral_hooks": ["Viral Hook 1", "Viral Hook 2", "Viral Hook 3"],
+  "short_form_hooks": ["Text Overlay 1", "Text Overlay 2"]
+}`;
+  } else if (toolType === 'ugc_scripts') {
+    schemaPrompt = `The output JSON MUST have exactly this structure:
+{
+  "tiktok_script": {
+    "visual": "Visual instruction",
+    "audio": "Audio description",
+    "dialogue": "Dialogue speech text"
+  },
+  "testimonial_script": {
+    "visual": "Visual instruction",
+    "audio": "Audio description",
+    "dialogue": "Dialogue speech text"
+  },
+  "problem_solution_script": {
+    "visual": "Visual instruction",
+    "audio": "Audio description",
+    "dialogue": "Dialogue speech text"
+  },
+  "thirty_second_ad": {
+    "visual": "Visual instruction",
+    "audio": "Audio description",
+    "dialogue": "Dialogue speech text"
+  }
+}`;
+  }
+
+  return `You are AdViral AI, a premium copywriter. Generate marketing copy/scripts for:
+- Product/Brand Name: ${product_name}
+- Product Description/Benefits: ${product_description}
+- Target Audience: ${target_audience}
+- Emotional Tone: ${tone}
+- Platform/CTA Style: ${platform} / ${cta_style}
+
+${schemaPrompt}
+
+IMPORTANT: Return ONLY a valid JSON object matching the requested schema. Do not include any explanation, intro, or outro text. Do not wrap the output in markdown codeblocks (no \`\`\`json ... \`\`\`). Only return valid parsable JSON.`;
+};
+
 export const generateAIContent = async (toolType, inputData, provider = 'openai', apiKey = '') => {
   // Simulate network delay for premium shimmering loader (1.5 seconds)
   await new Promise(resolve => setTimeout(resolve, 1500));
@@ -38,7 +105,7 @@ export const generateAIContent = async (toolType, inputData, provider = 'openai'
                 },
                 {
                   role: 'user',
-                  content: `Product: ${product_name}, Desc: ${product_description}, Audience: ${target_audience}, Platform: ${platform}, Tone: ${tone}, CTA: ${cta_style}. Return JSON structure.`
+                  content: getPromptForTool(toolType, inputData)
                 }
               ],
               response_format: { type: 'json_object' }
@@ -76,7 +143,7 @@ export const generateAIContent = async (toolType, inputData, provider = 'openai'
             body: JSON.stringify({
               contents: [{
                 parts: [{
-                  text: `You are AdViral AI. Return a JSON block matching tool: ${toolType}. Product: ${product_name}, Desc: ${product_description}, Audience: ${target_audience}, Platform: ${platform}, Tone: ${tone}, CTA: ${cta_style}. Return JSON only.`
+                  text: getPromptForTool(toolType, inputData)
                 }]
               }],
               generationConfig: { responseMimeType: 'application/json' }

@@ -31,40 +31,15 @@ export const AuthProvider = ({ children }) => {
     if (supabase) {
       setSessionMode('supabase');
       
-      // Initialize Supabase Auth Session listener
-      const initSupabaseSession = async () => {
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
-            const syncRes = await syncSupabaseProfile(session.user.id, session.user.email);
-            if (!syncRes || !syncRes.success) {
-              console.warn("Failed to sync profile on startup, clearing session:", syncRes?.error);
-              await supabase.auth.signOut();
-              setUser(null);
-              localStorage.removeItem('adviral_active_user');
-            }
-          } else {
-            setUser(null);
-          }
-        } catch (err) {
-          console.error("Error initializing session: ", err);
-        } finally {
-          setLoading(false);
-          clearTimeout(safetyTimeout);
-        }
-      };
+      let isInitialized = false;
 
-      initSupabaseSession();
-
-      // Listen to auth state transitions reactively
+      // Listen to auth state transitions reactively.
+      // In Supabase v2, onAuthStateChange fires immediately upon subscription with the initial session.
       const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log(`Supabase Auth Transition Event: ${event}`);
         try {
           if (session?.user) {
-            // Only set loading to true if there is no user logged in yet.
-            // This prevents flashing full-screen loaders during background token refreshes or tab wakeups!
-            if (!userRef.current) {
-              setLoading(true);
-            }
+            // Sync the user profile from Supabase
             const syncRes = await syncSupabaseProfile(session.user.id, session.user.email);
             if (!syncRes || !syncRes.success) {
               console.warn("Failed to sync profile on auth change, clearing session:", syncRes?.error);
@@ -79,8 +54,12 @@ export const AuthProvider = ({ children }) => {
         } catch (err) {
           console.error("Auth state change error: ", err);
         } finally {
-          setLoading(false);
-          clearTimeout(safetyTimeout);
+          // Once the first auth check finishes, terminate loading state and clear the safety timeout
+          if (!isInitialized) {
+            isInitialized = true;
+            setLoading(false);
+            clearTimeout(safetyTimeout);
+          }
         }
       });
       subscription = data?.subscription;

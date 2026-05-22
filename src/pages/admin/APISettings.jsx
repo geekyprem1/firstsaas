@@ -19,6 +19,12 @@ export const APISettings = () => {
   const { apiSettings, adminUpdateApiSetting, adminSetDefaultProvider } = useDatabase();
   const [toast, setToast] = useState(null);
 
+  const openaiProvider = apiSettings.find(a => a.provider_name === 'openai');
+  const geminiProvider = apiSettings.find(a => a.provider_name === 'gemini');
+
+  const isOpenaiActive = openaiProvider && openaiProvider.status && openaiProvider.api_key && !openaiProvider.api_key.includes('••••');
+  const isGeminiActive = geminiProvider && geminiProvider.status && geminiProvider.api_key && !geminiProvider.api_key.includes('••••');
+
   // Key visibility toggles
   const [showKeys, setShowKeys] = useState({});
   // Form input values (holds typed keys)
@@ -230,13 +236,23 @@ export const APISettings = () => {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-[11px] font-semibold text-gray-400">
                 <span>OpenAI Connection</span>
-                <span className="text-emerald-400 flex items-center gap-0.5">
-                  <Check className="w-3 h-3" /> Online
-                </span>
+                {isOpenaiActive ? (
+                  <span className="text-emerald-400 flex items-center gap-0.5">
+                    <Check className="w-3 h-3" /> Online
+                  </span>
+                ) : (
+                  <span className="text-gray-500">Inactive</span>
+                )}
               </div>
               <div className="flex items-center justify-between text-[11px] font-semibold text-gray-400">
                 <span>Gemini API Node</span>
-                <span className="text-gray-500">Inactive</span>
+                {isGeminiActive ? (
+                  <span className="text-emerald-400 flex items-center gap-0.5">
+                    <Check className="w-3 h-3" /> Active
+                  </span>
+                ) : (
+                  <span className="text-gray-500">Inactive</span>
+                )}
               </div>
               <div className="flex items-center justify-between text-[11px] font-semibold text-gray-400">
                 <span>SSL Security</span>

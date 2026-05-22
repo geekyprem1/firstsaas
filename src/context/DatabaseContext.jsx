@@ -102,10 +102,10 @@ export const DatabaseProvider = ({ children }) => {
           }
           if (apiData) setApiSettings(apiData);
         } else {
-          // Regular users can still see provider status and names for selector, but not API keys
+          // Regular users can fetch full settings to execute direct browser API calls
           const { data: apiData } = await supabase
             .from('api_settings')
-            .select('provider_name, status, is_default');
+            .select('*');
           if (apiData) setApiSettings(apiData);
         }
       } catch (err) {

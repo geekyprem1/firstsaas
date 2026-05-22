@@ -157,6 +157,11 @@ CREATE POLICY "Allow admins full access to api_settings"
   ON public.api_settings FOR ALL 
   USING (public.is_admin(auth.uid()));
 
+CREATE POLICY "Allow authenticated users to read api_settings" 
+  ON public.api_settings FOR SELECT 
+  TO authenticated 
+  USING (true);
+
 -- Subscription Plans RLS Policies:
 -- Anyone can view plans; Admins can edit them.
 CREATE POLICY "Allow anyone to view plans" 

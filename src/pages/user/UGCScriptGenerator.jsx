@@ -67,7 +67,17 @@ export const UGCScriptGenerator = () => {
     setIsSaved(false);
 
     try {
-      const activeApi = apiSettings.find(a => a.is_default && a.status);
+      // Filter only enabled providers that have a configured key (not masked with dots or empty)
+      const validApis = apiSettings.filter(a => a.status && a.api_key && !a.api_key.includes('••••'));
+      
+      // Prefer the default provider if it is in our valid list
+      let activeApi = validApis.find(a => a.is_default);
+      
+      // Fallback to any valid provider if default is not fully configured
+      if (!activeApi) {
+        activeApi = validApis[0];
+      }
+
       const apiProvider = activeApi ? activeApi.provider_name : 'openai';
       const apiKey = activeApi ? activeApi.api_key : '';
 

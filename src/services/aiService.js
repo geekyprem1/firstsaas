@@ -19,49 +19,90 @@ export const generateAIContent = async (toolType, inputData, provider = 'openai'
   if (apiKey && !apiKey.includes('••••')) {
     try {
       if (provider === 'openai') {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [
-              {
-                role: 'system',
-                content: `You are AdViral AI, an expert copywriter. Output clean JSON only. Matching this tool: ${toolType}.`
-              },
-              {
-                role: 'user',
-                content: `Product: ${product_name}, Desc: ${product_description}, Audience: ${target_audience}, Platform: ${platform}, Tone: ${tone}, CTA: ${cta_style}. Return JSON structure.`
-              }
-            ],
-            response_format: { type: 'json_object' }
-          })
-        });
-        if (response.ok) {
-          const json = await response.json();
-          const parsed = JSON.parse(json.choices[0].message.content);
-          return parsed;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
+
+        try {
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [
+                {
+                  role: 'system',
+                  content: `You are AdViral AI, an expert copywriter. Output clean JSON only. Matching this tool: ${toolType}.`
+                },
+                {
+                  role: 'user',
+                  content: `Product: ${product_name}, Desc: ${product_description}, Audience: ${target_audience}, Platform: ${platform}, Tone: ${tone}, CTA: ${cta_style}. Return JSON structure.`
+                }
+              ],
+              response_format: { type: 'json_object' }
+            }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+
+          if (response.ok) {
+            const json = await response.json();
+            const text = json.choices[0].message.content;
+            let cleanedText = text.trim();
+            if (cleanedText.startsWith('```')) {
+              cleanedText = cleanedText.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '');
+            }
+            return JSON.parse(cleanedText.trim());
+          } else {
+            const errText = await response.text();
+            console.warn(`OpenAI API returned error status ${response.status}:`, errText);
+          }
+        } catch (fetchErr) {
+          clearTimeout(timeoutId);
+          console.warn("OpenAI fetch error: ", fetchErr);
         }
       } else if (provider === 'gemini') {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: `You are AdViral AI. Return a JSON block matching tool: ${toolType}. Product: ${product_name}, Desc: ${product_description}, Audience: ${target_audience}, Platform: ${platform}, Tone: ${tone}, CTA: ${cta_style}. Return JSON only.`
-              }]
-            }],
-            generationConfig: { responseMimeType: 'application/json' }
-          })
-        });
-        if (response.ok) {
-          const json = await response.json();
-          const text = json.candidates[0].content.parts[0].text;
-          return JSON.parse(text);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
+
+        try {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{
+                  text: `You are AdViral AI. Return a JSON block matching tool: ${toolType}. Product: ${product_name}, Desc: ${product_description}, Audience: ${target_audience}, Platform: ${platform}, Tone: ${tone}, CTA: ${cta_style}. Return JSON only.`
+                }]
+              }],
+              generationConfig: { responseMimeType: 'application/json' }
+            }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+
+          if (response.ok) {
+            const json = await response.json();
+            if (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts && json.candidates[0].content.parts[0]) {
+              const text = json.candidates[0].content.parts[0].text;
+              // Clean markdown block wrappers from Gemini if present
+              let cleanedText = text.trim();
+              if (cleanedText.startsWith('```')) {
+                cleanedText = cleanedText.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '');
+              }
+              return JSON.parse(cleanedText.trim());
+            } else {
+              console.warn("Gemini response is missing expected candidates structure:", json);
+            }
+          } else {
+            const errText = await response.text();
+            console.warn(`Gemini API returned error status ${response.status}:`, errText);
+          }
+        } catch (fetchErr) {
+          clearTimeout(timeoutId);
+          console.warn("Gemini fetch error: ", fetchErr);
         }
       }
     } catch (e) {

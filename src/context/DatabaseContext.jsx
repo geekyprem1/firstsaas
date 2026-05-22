@@ -22,10 +22,28 @@ export const DatabaseProvider = ({ children }) => {
     if (sessionMode === 'supabase' && supabase) {
       try {
         // Fetch plans (publicly accessible by everyone)
-        const { data: plansData } = await supabase
+        let { data: plansData } = await supabase
           .from('subscription_plans')
           .select('*')
           .order('price', { ascending: true });
+        
+        // Self-healing check for plans (Admin only can seed if empty)
+        if ((!plansData || plansData.length === 0) && user && user.role === 'admin') {
+          console.log("Admin detected empty subscription_plans. Seeding default tiers...");
+          const { data: seededPlans, error: seedErr } = await supabase
+            .from('subscription_plans')
+            .insert([
+              { plan_name: 'Free', credits: 50, price: 0.00, features: ['50 welcome credits', 'Access all AI tool editors', 'Local storage backup logs'] },
+              { plan_name: 'Pro', credits: 1000, price: 49.00, features: ['1,000 monthly credits', 'Saved Projects project folders', 'Priority service SLA queue', 'Stripe checkout simulator access'] },
+              { plan_name: 'Enterprise', credits: 99999, price: 199.00, features: ['Unlimited credits supply', 'Live API keys toggling switcher', 'Dedicated account support 24/7', 'Custom tools cost override nodes'] }
+            ])
+            .select()
+            .order('price', { ascending: true });
+          
+          if (!seedErr && seededPlans) {
+            plansData = seededPlans;
+          }
+        }
         if (plansData) setPlans(plansData);
 
         if (!user) return;
@@ -61,10 +79,27 @@ export const DatabaseProvider = ({ children }) => {
 
         // Fetch API settings (admin only, RLS restricts regular users)
         if (user.role === 'admin') {
-          const { data: apiData } = await supabase
+          let { data: apiData } = await supabase
             .from('api_settings')
             .select('*')
             .order('provider_name', { ascending: true });
+          
+          // Self-healing: Seed api_settings if empty
+          if (apiData && apiData.length === 0) {
+            console.log("Admin detected empty api_settings. Seeding default configurations...");
+            const { data: seededData, error: seedErr } = await supabase
+              .from('api_settings')
+              .insert([
+                { provider_name: 'openai', api_key: 'sk-proj-••••••••••••••••••••••••', status: true, is_default: true },
+                { provider_name: 'gemini', api_key: 'AIzaSy••••••••••••••••••••••••', status: false, is_default: false }
+              ])
+              .select()
+              .order('provider_name', { ascending: true });
+            
+            if (!seedErr && seededData) {
+              apiData = seededData;
+            }
+          }
           if (apiData) setApiSettings(apiData);
         } else {
           // Regular users can still see provider status and names for selector, but not API keys
@@ -452,8 +487,10 @@ export const DatabaseProvider = ({ children }) => {
       try {
         const { error } = await supabase
           .from('api_settings')
-          .update({ api_key: key, status: status })
-          .eq('provider_name', providerName);
+          .upsert(
+            { provider_name: providerName, api_key: key, status: status },
+            { onConflict: 'provider_name' }
+          );
 
         if (error) throw error;
         await refreshAllData();

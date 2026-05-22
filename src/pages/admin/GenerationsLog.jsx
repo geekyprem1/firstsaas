@@ -62,6 +62,30 @@ export const GenerationsLog = () => {
     }
   };
 
+  const getProviderBadge = (gen) => {
+    const provider = gen.generated_result?._provider || gen.input_data?._provider || 'local';
+    switch (provider) {
+      case 'openai':
+        return (
+          <span className="inline-flex items-center gap-1 text-[10px] bg-emerald-950/60 border border-emerald-500/25 text-emerald-300 px-2.5 py-0.5 rounded-full font-bold select-none">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 animate-pulse"></span> OpenAI
+          </span>
+        );
+      case 'gemini':
+        return (
+          <span className="inline-flex items-center gap-1 text-[10px] bg-blue-950/60 border border-blue-500/25 text-blue-300 px-2.5 py-0.5 rounded-full font-bold select-none">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 animate-pulse"></span> Gemini
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 text-[10px] bg-purple-950/60 border border-purple-500/25 text-purple-300 px-2.5 py-0.5 rounded-full font-bold select-none">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0"></span> Local
+          </span>
+        );
+    }
+  };
+
   const handleDeleteLog = async (id) => {
     if (confirm('Are you sure you want to delete this historical generation log? This action is irreversible.')) {
       await deleteProject(id);
@@ -138,6 +162,7 @@ export const GenerationsLog = () => {
               <tr className="border-b border-purple-500/10 bg-[#0c071a]/60 select-none">
                 <th className="p-4 font-black uppercase text-purple-400 tracking-wider">User Profile</th>
                 <th className="p-4 font-black uppercase text-purple-400 tracking-wider">AI Tool</th>
+                <th className="p-4 font-black uppercase text-purple-400 tracking-wider">AI Provider</th>
                 <th className="p-4 font-black uppercase text-purple-400 tracking-wider">Product Scope</th>
                 <th className="p-4 font-black uppercase text-purple-400 tracking-wider">Date & Time</th>
                 <th className="p-4 font-black uppercase text-purple-400 tracking-wider text-center">Cost</th>
@@ -147,7 +172,7 @@ export const GenerationsLog = () => {
             <tbody>
               {filteredGenerations.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center p-12 text-gray-500">
+                  <td colSpan={7} className="text-center p-12 text-gray-500">
                     <FileText className="w-8 h-8 text-gray-700 mx-auto mb-2.5" />
                     No historical logs matching this query.
                   </td>
@@ -173,6 +198,9 @@ export const GenerationsLog = () => {
                       </td>
                       <td className="p-4 whitespace-nowrap">
                         {getToolBadge(gen.tool_type)}
+                      </td>
+                      <td className="p-4 whitespace-nowrap">
+                        {getProviderBadge(gen)}
                       </td>
                       <td className="p-4 text-gray-300 font-bold truncate max-w-[180px]">
                         {gen.input_data?.product_name || 'N/A'}
@@ -219,17 +247,24 @@ export const GenerationsLog = () => {
         >
           <div className="space-y-5 text-left max-h-[70vh] overflow-y-auto pr-1">
             {/* Quick Profile Summary */}
-            <div className="flex items-center gap-3.5 p-3.5 bg-black/40 border border-purple-500/10 rounded-2xl select-none">
-              <div className="p-2.5 bg-purple-950/50 border border-purple-500/20 text-purple-300 rounded-xl">
-                <User className="w-4 h-4" />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-black/40 border border-purple-500/10 rounded-2xl select-none">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-purple-950/50 border border-purple-500/20 text-purple-300 rounded-xl shrink-0">
+                  <User className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-gray-200 truncate">{getLogUser(selectedGen.user_id).name}</div>
+                  <div className="text-[10px] text-gray-500 truncate">{getLogUser(selectedGen.user_id).email}</div>
+                </div>
               </div>
-              <div>
-                <div className="text-xs font-bold text-gray-200">{getLogUser(selectedGen.user_id).name}</div>
-                <div className="text-[10px] text-gray-500">{getLogUser(selectedGen.user_id).email}</div>
-              </div>
-              <div className="ml-auto flex items-center gap-1.5 text-[10px] font-semibold text-gray-400">
-                <Clock className="w-3.5 h-3.5" />
-                {new Date(selectedGen.created_at).toLocaleDateString()}
+              
+              <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+                {getToolBadge(selectedGen.tool_type)}
+                {getProviderBadge(selectedGen)}
+                <span className="flex items-center gap-1 text-[10px] bg-black/40 border border-purple-500/5 text-gray-400 px-2 py-0.5 rounded-full font-bold">
+                  <Clock className="w-3 h-3 text-gray-500" />
+                  {new Date(selectedGen.created_at).toLocaleDateString()}
+                </span>
               </div>
             </div>
 

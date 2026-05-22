@@ -54,7 +54,9 @@ export const generateAIContent = async (toolType, inputData, provider = 'openai'
             if (cleanedText.startsWith('```')) {
               cleanedText = cleanedText.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '');
             }
-            return JSON.parse(cleanedText.trim());
+            const parsed = JSON.parse(cleanedText.trim());
+            parsed._provider = 'openai';
+            return parsed;
           } else {
             const errText = await response.text();
             console.warn(`OpenAI API returned error status ${response.status}:`, errText);
@@ -92,7 +94,9 @@ export const generateAIContent = async (toolType, inputData, provider = 'openai'
               if (cleanedText.startsWith('```')) {
                 cleanedText = cleanedText.replace(/^```[a-zA-Z]*\n/, '').replace(/\n```$/, '');
               }
-              return JSON.parse(cleanedText.trim());
+              const parsed = JSON.parse(cleanedText.trim());
+              parsed._provider = 'gemini';
+              return parsed;
             } else {
               console.warn("Gemini response is missing expected candidates structure:", json);
             }
@@ -126,6 +130,7 @@ export const generateAIContent = async (toolType, inputData, provider = 'openai'
 
   if (toolType === 'ad_generator') {
     return {
+      _provider: 'local',
       headlines: [
         `Tired of old solutions? Meet ${brandWord}! ${activeTone.emoji}`,
         `The ${activeTone.adj} way to support your daily routine.`,
@@ -151,6 +156,7 @@ export const generateAIContent = async (toolType, inputData, provider = 'openai'
 
   if (toolType === 'viral_hooks') {
     return {
+      _provider: 'local',
       curiosity_hooks: [
         `Why most people fail at organizing their life... until they try ${brandWord}. 🤔`,
         `The shocking truth about standard setups for ${target_audience}.`,
@@ -180,6 +186,7 @@ export const generateAIContent = async (toolType, inputData, provider = 'openai'
 
   if (toolType === 'ugc_scripts') {
     return {
+      _provider: 'local',
       tiktok_script: {
         visual: `Visual: Creator looking super relatable, starting with a close-up holding ${brandWord}. Cut to showing standard low-quality alternatives failing. End with creator showing the amazing features of ${brandWord}.`,
         audio: `Audio: Trending energetic low-fi beat in background.`,
@@ -204,6 +211,7 @@ export const generateAIContent = async (toolType, inputData, provider = 'openai'
   }
 
   return {
+    _provider: 'local',
     output: `Generated high-quality copywriting for ${brandWord} matching your request!`
   };
 };

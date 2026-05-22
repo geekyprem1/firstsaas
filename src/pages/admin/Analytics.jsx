@@ -88,6 +88,49 @@ export const Analytics = () => {
     { label: 'Enterprise Agency', plan: 'Enterprise', count: planCounts.Enterprise, pct: totalClients > 0 ? (planCounts.Enterprise / totalClients * 100).toFixed(0) : 0, color: 'bg-emerald-500' }
   ];
 
+  // --- AI PROVIDER TELEMETRY ANALYSIS ---
+  const providerCounts = generations.reduce((acc, gen) => {
+    const provider = gen.generated_result?._provider || gen.input_data?._provider || 'local';
+    acc[provider] = (acc[provider] || 0) + 1;
+    return acc;
+  }, { openai: 0, gemini: 0, local: 0 });
+
+  const aiProviders = [
+    {
+      id: 'openai',
+      label: 'OpenAI GPT-4o-mini',
+      count: providerCounts.openai,
+      percentage: totalGens > 0 ? ((providerCounts.openai / totalGens) * 100).toFixed(0) : 0,
+      color: 'bg-emerald-500',
+      colorClass: 'from-emerald-600 to-teal-500',
+      borderClass: 'border-emerald-500/10 hover:border-emerald-500/25',
+      badgeBg: 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/20',
+      description: 'Creative marketing copies, primary headlines & contextual Facebook AD hooks.'
+    },
+    {
+      id: 'gemini',
+      label: 'Google Gemini 1.5 Flash',
+      count: providerCounts.gemini,
+      percentage: totalGens > 0 ? ((providerCounts.gemini / totalGens) * 100).toFixed(0) : 0,
+      color: 'bg-blue-500',
+      colorClass: 'from-blue-600 to-cyan-500',
+      borderClass: 'border-blue-500/10 hover:border-blue-500/25',
+      badgeBg: 'bg-blue-950/40 text-blue-400 border border-blue-500/20',
+      description: 'High-speed script structural outlines, ADHD curiosity triggers & UGC visual cues.'
+    },
+    {
+      id: 'local',
+      label: 'Local Compiler Fallback',
+      count: providerCounts.local,
+      percentage: totalGens > 0 ? ((providerCounts.local / totalGens) * 100).toFixed(0) : 0,
+      color: 'bg-purple-500',
+      colorClass: 'from-purple-600 to-indigo-500',
+      borderClass: 'border-purple-500/10 hover:border-purple-500/25',
+      badgeBg: 'bg-purple-950/40 text-purple-300 border border-purple-500/20',
+      description: 'Zero-API cost local copy structures using optimized high-converting copywriting formulas.'
+    }
+  ].sort((a, b) => b.count - a.count);
+
   // Map transaction user
   const getTxUserEmail = (userId) => {
     const user = users.find(u => u.id === userId);
@@ -236,6 +279,71 @@ export const Analytics = () => {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* AI Provider Telemetry Dashboard Panel */}
+      <div className="glass-panel rounded-3xl border-purple-500/10 p-6 shadow-xl space-y-5">
+        <div className="pb-3 border-b border-purple-500/10 select-none flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-black text-gray-200 uppercase tracking-wider flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-ping shrink-0" />
+              AI API Routing & Engine Distribution
+            </h3>
+            <p className="text-[10px] text-gray-500 mt-0.5">Real-time breakdown of model intelligence layers queried across customer generations</p>
+          </div>
+          
+          {/* Quick Pill aggregates */}
+          <div className="flex flex-wrap gap-2 text-[10px] font-bold">
+            <span className="bg-emerald-950/40 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">OpenAI: {providerCounts.openai}</span>
+            <span className="bg-blue-950/40 border border-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">Gemini: {providerCounts.gemini}</span>
+            <span className="bg-purple-950/40 border border-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full">Local: {providerCounts.local}</span>
+          </div>
+        </div>
+
+        {/* Proportional Engine distribution split bar */}
+        <div className="flex h-5 border border-purple-500/5 rounded-full overflow-hidden shadow-inner select-none bg-black/40">
+          {aiProviders.length === 0 || totalGens === 0 ? (
+            <div className="w-full bg-gray-900 flex items-center justify-center text-[10px] text-gray-600 font-bold">No generation engine tracking data available</div>
+          ) : (
+            aiProviders.map((item, index) => {
+              // Ensure we don't render a 0% width section if count is 0
+              if (item.count === 0) return null;
+              return (
+                <div 
+                  key={index}
+                  className={`h-full ${item.color} transition-all duration-500`}
+                  style={{ width: `${item.percentage}%` }}
+                  title={`${item.label}: ${item.percentage}%`}
+                />
+              );
+            })
+          )}
+        </div>
+
+        {/* Grid cards detail breakdown */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+          {aiProviders.map((prov) => (
+            <div 
+              key={prov.id} 
+              className={`glass-panel border rounded-2xl p-4 space-y-3 transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_0_15px_rgba(168,85,247,0.05)] cursor-default ${prov.borderClass}`}
+            >
+              <div className="flex items-center justify-between">
+                <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider ${prov.badgeBg}`}>
+                  {prov.id}
+                </span>
+                <span className="text-sm font-black text-white">{prov.percentage}%</span>
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-gray-200">{prov.label}</h4>
+                <p className="text-[10px] text-gray-500 mt-1 leading-normal">{prov.description}</p>
+              </div>
+              <div className="pt-2 border-t border-purple-500/5 flex justify-between items-center text-[10px] text-gray-400 font-bold select-none">
+                <span>Total execution logs:</span>
+                <span className="text-purple-300 font-black">{prov.count} runs</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

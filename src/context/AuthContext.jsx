@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { mockDb } from '../services/mockDb';
 import { supabase } from '../services/supabase';
 
@@ -10,6 +10,12 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sessionMode, setSessionMode] = useState('mock'); // 'mock' or 'supabase'
+
+  // Keep a ref of the current user state to avoid stale closure issues in onAuthStateChange
+  const userRef = useRef(null);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   useEffect(() => {
     // Determine active session mode
@@ -44,7 +50,11 @@ export const AuthProvider = ({ children }) => {
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
         try {
           if (session?.user) {
-            setLoading(true);
+            // Only set loading to true if there is no user logged in yet.
+            // This prevents flashing full-screen loaders during background token refreshes or tab wakeups!
+            if (!userRef.current) {
+              setLoading(true);
+            }
             const syncRes = await syncSupabaseProfile(session.user.id, session.user.email);
             if (!syncRes || !syncRes.success) {
               console.warn("Failed to sync profile on auth change, clearing session:", syncRes?.error);
